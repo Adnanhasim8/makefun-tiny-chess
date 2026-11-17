@@ -1,6 +1,6 @@
 import sys,time;T=time.time;X=TimeoutError
 V=[0,100,300,320,500,950,0]
-KN=(-31,-33,-14,-18,14,18,31,33);K8=(-17,-16,-15,-1,1,15,16,17);BD=(-17,-15,15,17);RD=(-16,-1,1,16)
+KN=(-31,-33,-14,-18,14,18,31,33);BD=(-17,-15,15,17);RD=(-16,-1,1,16);K8=BD+RD
 SN=[chr(97+s%8)+chr(49+s//16)for s in range(128)]
 B=[0]*128;HS=[]
 SF="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -"
@@ -22,7 +22,7 @@ def G():
   if p*S<=0:continue
   t=abs(p)
   if t==1:
-   d=16*S;r=s>>4;pr=r==(6 if S>0 else 1)
+   d=16*S;r=s>>4;w=6-(S>0)*5;pr=r==7-w
    pv=lambda u:[ap(s|u<<7|x<<14)for x in((5,4,3,2)if pr else(0,))]
    for dd in(d-1,d,d+1):
     u=s+dd
@@ -31,7 +31,7 @@ def G():
     if dd==d:
      if q:continue
      pv(u)
-     if r==(1 if S>0 else 6)and not B[s+2*d]:ap(s|(s+2*d)<<7)
+     if r==w and not B[s+2*d]:ap(s|(s+2*d)<<7)
     elif(q and q*S<0)or u==EP:pv(u)
   else:
    for d in(KN,BD,RD,K8,K8)[t-2]:
@@ -41,8 +41,8 @@ def G():
      if t in(2,6):break
      u+=d
     if not u&0x88 and B[u]*S<0:ap(s|u<<7)
- for bt,kf,dr in((1,4,1),(2,4,-1),(4,116,1),(8,116,-1)):
-  if(S>0)==(kf<100)and C&bt and not(B[kf+dr]or B[kf+2*dr]or(dr<0 and B[kf-3]))and not A(kf,-S)+A(kf+dr,-S)+A(kf+2*dr,-S):ap(kf|(kf+2*dr)<<7)
+ for bt,kf,dr in((1,4,1),(2,4,-1))if S>0 else((4,116,1),(8,116,-1)):
+  if C&bt and not(B[kf+dr]or B[kf+2*dr]or(dr<0 and B[kf-3]))and not A(kf,-S)+A(kf+dr,-S)+A(kf+2*dr,-S):ap(kf|(kf+2*dr)<<7)
  return ms
 def MV(m,u):
  global S,C,EP
@@ -88,22 +88,21 @@ def E():
  for s,p in enumerate(B):
   if p:
    t=abs(p);v=V[t]
-   if t==1:
-    a=s>>4 if p>0 else 7-s//16
-    v+=a*6
+   if t==1:v+=(s>>4 if p>0 else 7-s//16)*6
+   elif t<4:v+=(s&7)*(7-s&7)+(s>>4)*(7-s//16)
    e+=v*p//abs(p)
  return e*S
 def SE(a,b,d,pl):
  global BM
- if D and T()>TD:raise X
+ if T()>TD+.15 or D and T()>TD:raise X
  if d<=0:
-  st=E()
+  st=E()if not A(B.index(6*S),-S)else-9999
   if st>=b:return b
-  if st>a:a=st
+  a=max(a,st)
  ms=LM()
  if not ms:return -10000+pl if A(B.index(6*S),-S)else 0
- if d<=0:ms=[x for x in ms if x[0]]
- for sc,m in ms:
+ if d<=0 and st>-9999:ms=[x for x in ms if x[0]]
+ for _,m in ms:
   MV(m,0)
   try:v=-SE(-b,-a,d-1,pl+1)
   except X:MV(m,1);raise
@@ -121,11 +120,10 @@ def FEN(f=SF):
   elif'0'<ch<'9':s+=int(ch)
   else:B[s]=((ch<'a')*2-1)*('PNBRQK'.index(ch.upper())+1);s+=1
  S=1 if ps[1]=='w'else-1
- C=sum(1<<'KQkq'.index(ch)for ch in ps[2]if ch in'KQkq')
- EP=-1
- if ps[3]!='-':EP=(int(ps[3][1])-1)*16+ord(ps[3][0])-97
+ C=sum(1<<i for i in range(4)if'KQkq'[i]in ps[2])
+ EP=SN.index(ps[3])if ps[3]!='-'else-1
 def US(m):
- return SN[m&127]+SN[m>>7&127]+('nbrq'[m>>14-2]if m>>14 else'')
+ return SN[m&127]+SN[m>>7&127]+('  nbrq'[m>>14]if m>>14 else'')
 def main():
  global TD,BM,D
  FEN()
@@ -136,19 +134,19 @@ def main():
   elif c=='position':
    FEN(SF if t[1]=='startpos'else' '.join(t[2:]))
    for u in(t[t.index('moves')+1:]if'moves'in t else[]):
-    for sc,m in LM():
+    for m in G():
      if US(m)==u:MV(m,0);break
   elif c=='go':
    iv=lambda k:int(t[t.index(k)+1])if k in t else 0
    d=iv('depth')or 99;z=T();TD=z+5
    if'movetime'in t:TD=z+iv('movetime')/1050
    if'wtime'in t:
-    w='w'if S>0 else'b'
-    TD=z+min(iv(w+'time')/25000+iv(w+'inc')/2000,iv(w+'time')/2000)
+    w='w'if S>0 else'b';q=iv(w+'time')
+    TD=z+min(q/30000+iv(w+'inc')/2000,q/2000)
    ms=LM();m=ms[0][1]if ms else 0
    BM=m;D=0
    try:
     for dd in range(1,d+1):SE(-99999,99999,dd,0);m=BM;D=1
    except X:pass
-   print('bestmove '+(US(m)if m else'0000'),flush=True)
+   print('bestmove',US(m)if m else'0000',flush=True)
 if __name__=='__main__':main()
