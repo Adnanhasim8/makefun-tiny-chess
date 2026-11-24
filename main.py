@@ -1,7 +1,7 @@
 import json,os,urllib.request as R;X=TimeoutError
 V=[0,100,300,320,500,950,0]
 KN=(-31,-33,-14,-18,14,18,31,33);BD=(-17,-15,15,17);RD=(-16,-1,1,16);K8=BD+RD
-B=[0]*128;HS=[];NN=0;NB=1.2e5;T={}
+B=[0]*128;HS=[];NN=0;NB=9e4;T={}
 N=[chr(97+s%8)+chr(49+(s>>4))for s in range(128)]
 def A(s,w):
  for d in-15*w,-17*w:
@@ -110,7 +110,7 @@ def SE(a,b,d,pl):
   MV(m,0)
   if A(B.index(-6*S),S):MV(m,1);continue
   lg+=1
-  rd=d-2 if lg>2 and d>2 and not kk and not w else d-1
+  rd=d-2 if lg>4 and d>2 and not kk and not w else d-1
   try:
    v=-SE(-b if lg<2 else-a-1,-a,rd,pl+1)
    if rd<d-1 and v>a:v=-SE(-a-1,-a,d-1,pl+1)
